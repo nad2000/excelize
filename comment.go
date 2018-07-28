@@ -44,10 +44,30 @@ func (f *File) GetComments() (comments map[string]*xlsxComments) {
 //    xlsx.AddComment("Sheet1", "A30", `{"author":"Excelize: ","text":"This is a comment."}`)
 //
 func (f *File) AddComment(sheet, cell, format string) error {
+	yAxis, xAxis, err := CellCoords(cell)
+	if err != nil {
+		return err
+	}
+	return f.AddCommentAt(sheet, cell, format, xAxis+1, yAxis+1)
+}
+
+// AddComment provides the method to add comment in a sheet by given worksheet
+// index, cell and format set (such as author and text). Note that the max
+// author length is 255 and the max text length is 32512. For example, add a
+// comment in Sheet1!$A$30:
+//
+//    xlsx.AddComment("Sheet1", "A30", `{"author":"Excelize: ","text":"This is a comment."}`)
+//
+func (f *File) AddCommentAt(sheet, cell, format string, col, row int) error {
 	formatSet, err := parseFormatCommentsSet(format)
 	if err != nil {
 		return err
 	}
+	col1Width := f.GetColWidth(sheet, ColIndexToLetters(col+1))
+	// col2Width := f.GetColWidth(sheet, ColIndexToLetters(col+2))
+	// maxChar := ((col1Width+col2Width)/10.452839 - 0.007) / 0.17390901
+	// maxChar := (col1Width/5.2264195 - 0.007) / 0.17390901
+	maxChar := (col1Width/5.2264195 - 0.007) / 0.15
 	// Read sheet data.
 	xlsx := f.workSheetReader(sheet)
 	commentID := f.countComments() + 1
@@ -67,16 +87,21 @@ func (f *File) AddComment(sheet, cell, format string) error {
 	}
 	commentsXML := "xl/comments" + strconv.Itoa(commentID) + ".xml"
 	f.addComment(commentsXML, cell, formatSet)
-	var colCount int
+	var hight float64
 	for i, l := range strings.Split(formatSet.Text, "\n") {
-		if ll := len(l); ll > colCount {
-			if i == 0 {
-				ll += len(formatSet.Author)
-			}
-			colCount = ll
+		ll := len(l)
+		if i == 0 {
+			ll += len(formatSet.Author)
 		}
+		hight += float64(ll) / maxChar
 	}
-	f.addDrawingVML(commentID, drawingVML, cell, strings.Count(formatSet.Text, "\n")+1, colCount)
+	// f.addDrawingVML(commentID, drawingVML, cell, strings.Count(formatSet.Text, "\n")+1, colCount)
+	f.addBoxDrawingVML(
+		commentID, drawingVML, cell,
+		col, 23, row, 5, col+1, 23, row+int(hight+0.5), 5)
+
+	//1+xAxis, 23, 1+yAxis, 0, 2+xAxis+lineCount, colCount+xAxis, 2+yAxis+lineCount, 5)
+	// leftColumn, leftOffset, topRow, topOffset, rightColumn, rightOffset, bottomRow, bottomOffset int) {
 	f.addContentTypePart(commentID, "comments")
 	return err
 }
@@ -86,8 +111,21 @@ func (f *File) AddComment(sheet, cell, format string) error {
 func (f *File) addDrawingVML(commentID int, drawingVML, cell string, lineCount, colCount int) {
 	col := string(strings.Map(letterOnlyMapF, cell))
 	row, _ := strconv.Atoi(strings.Map(intOnlyMapF, cell))
-	xAxis := row - 1
-	yAxis := TitleToNumber(col)
+	xAxis := TitleToNumber(col)
+	yAxis := row - 1
+
+	f.addBoxDrawingVML(commentID, drawingVML, cell,
+		1+xAxis, 23, 1+yAxis, 0, 2+xAxis+lineCount, colCount+xAxis, 2+yAxis+lineCount, 5)
+}
+
+// addDrawingVML provides function to create comment as
+// xl/drawings/vmlDrawing%d.vml by given commit ID and cell.
+func (f *File) addBoxDrawingVML(commentID int, drawingVML, cell string,
+	leftColumn, leftOffset, topRow, topOffset, rightColumn, rightOffset, bottomRow, bottomOffset int) {
+	col := string(strings.Map(letterOnlyMapF, cell))
+	row, _ := strconv.Atoi(strings.Map(intOnlyMapF, cell))
+	xAxis := TitleToNumber(col)
+	yAxis := row - 1
 	vml := vmlDrawing{
 		XMLNSv:  "urn:schemas-microsoft-com:vml",
 		XMLNSo:  "urn:schemas-microsoft-com:office:office",
@@ -141,11 +179,11 @@ func (f *File) addDrawingVML(commentID int, drawingVML, cell string, lineCount, 
 		ClientData: &xClientData{
 			ObjectType: "Note",
 			Anchor: fmt.Sprintf(
-				"%d, 23, %d, 0, %d, %d, %d, 5",
-				1+yAxis, 1+xAxis, 2+yAxis+lineCount, colCount+yAxis, 2+xAxis+lineCount),
+				"%d, %d, %d, %d, %d, %d, %d, %d",
+				leftColumn, leftOffset, topRow, topOffset, rightColumn, rightOffset, bottomRow, bottomOffset),
 			AutoFill: "True",
-			Row:      xAxis,
-			Column:   yAxis,
+			Row:      yAxis,
+			Column:   xAxis,
 		},
 	}
 	s, _ := xml.Marshal(sp)
