@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-// parseFormatCommentsSet provides function to parse the format settings of the
-// comment with default value.
+// parseFormatCommentsSet provides a function to parse the format settings of
+// the comment with default value.
 func parseFormatCommentsSet(formatSet string) (*formatComment, error) {
 	format := formatComment{
 		Author: "Author:",
@@ -19,8 +19,8 @@ func parseFormatCommentsSet(formatSet string) (*formatComment, error) {
 	return &format, err
 }
 
-// GetComments retrieves all comments and returns a map
-// of worksheet name to the worksheet comments.
+// GetComments retrieves all comments and returns a map of worksheet name to
+// the worksheet comments.
 func (f *File) GetComments() (comments map[string]*xlsxComments) {
 	comments = map[string]*xlsxComments{}
 	for n := range f.sheetMap {
@@ -106,7 +106,7 @@ func (f *File) AddCommentAt(sheet, cell, format string, col, row int) error {
 	return err
 }
 
-// addDrawingVML provides function to create comment as
+// addDrawingVML provides a function to create comment as
 // xl/drawings/vmlDrawing%d.vml by given commit ID and cell.
 func (f *File) addDrawingVML(commentID int, drawingVML, cell string, lineCount, colCount int) {
 	col := string(strings.Map(letterOnlyMapF, cell))
@@ -216,8 +216,8 @@ func (f *File) addBoxDrawingVML(commentID int, drawingVML, cell string,
 	f.XLSX[drawingVML] = v
 }
 
-// addComment provides function to create chart as xl/comments%d.xml by given
-// cell and format sets.
+// addComment provides a function to create chart as xl/comments%d.xml by
+// given cell and format sets.
 func (f *File) addComment(commentsXML, cell string, formatSet *formatComment) {
 	a := formatSet.Author
 	t := formatSet.Text
@@ -276,8 +276,8 @@ func (f *File) addComment(commentsXML, cell string, formatSet *formatComment) {
 	f.saveFileList(commentsXML, v)
 }
 
-// countComments provides function to get comments files count storage in the
-// folder xl.
+// countComments provides a function to get comments files count storage in
+// the folder xl.
 func (f *File) countComments() int {
 	count := 0
 	for k := range f.XLSX {
