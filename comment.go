@@ -64,10 +64,11 @@ func (f *File) AddCommentAt(sheet, cell, format string, col, row int) error {
 		return err
 	}
 	col1Width := f.GetColWidth(sheet, ColIndexToLetters(col+1))
-	// col2Width := f.GetColWidth(sheet, ColIndexToLetters(col+2))
+	col2Width := f.GetColWidth(sheet, ColIndexToLetters(col+2))
 	// maxChar := ((col1Width+col2Width)/10.452839 - 0.007) / 0.17390901
 	// maxChar := (col1Width/5.2264195 - 0.007) / 0.17390901
-	maxChar := (col1Width/5.2264195 - 0.007) / 0.15
+	maxChar := ((col1Width+col2Width)/5.2264195 - 0.007) / 0.15
+	// maxChar := ((col1Width+col2Width)/5.2264195 - 0.007) / 0.17390901
 	// Read sheet data.
 	xlsx := f.workSheetReader(sheet)
 	commentID := f.countComments() + 1
@@ -96,9 +97,12 @@ func (f *File) AddCommentAt(sheet, cell, format string, col, row int) error {
 		hight += float64(ll) / maxChar
 	}
 	// f.addDrawingVML(commentID, drawingVML, cell, strings.Count(formatSet.Text, "\n")+1, colCount)
+	if hight < 0.5 {
+		hight = 1.0
+	}
 	f.addBoxDrawingVML(
 		commentID, drawingVML, cell,
-		col, 23, row, 5, col+1, 23, row+int(hight+0.5), 5)
+		col, 23, row, 5, col+2, 23, row+int(hight+0.5), 5)
 
 	//1+xAxis, 23, 1+yAxis, 0, 2+xAxis+lineCount, colCount+xAxis, 2+yAxis+lineCount, 5)
 	// leftColumn, leftOffset, topRow, topOffset, rightColumn, rightOffset, bottomRow, bottomOffset int) {
